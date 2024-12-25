@@ -9,7 +9,9 @@ import tailwind from '@astrojs/tailwind';
 
 // https://astro.build/config
 export default defineConfig({
-  integrations: [preact(), tailwind()],
+  integrations: [preact({
+    compat: true
+  }), tailwind()],
   adapter: node({
     mode: 'standalone'
   }),

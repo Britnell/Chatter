@@ -2,6 +2,12 @@
 
 lorem ipsum
 
+## TODO
+- [ ] use openai package + switch to streaming
+- [x] use md parser for response
+- [ ] cache selected model
+- [ ] settings to add / remove models
+
 ## Docs
 
 - https://github.com/ollama/ollama/blob/main/docs/openai.md

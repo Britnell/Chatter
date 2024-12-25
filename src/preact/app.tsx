@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from "preact/hooks";
+import Markdown from "react-markdown";
 
 type Message = {
   role: string;
@@ -43,7 +44,6 @@ const queryClaude = (messages: Message[], model: string, maxTokens: number) =>
     method: "POST",
     body: JSON.stringify({ messages, model, maxTokens }),
   }).then((res) => (res.ok ? res.json() : res.text()));
-// .then((res) => res?.content?.[0]?.text);
 
 const queryOllama = (messages: Message[], model: string, maxTokens: number) =>
   fetch("http://localhost:11434/v1/chat/completions", {
@@ -56,9 +56,7 @@ const queryOllama = (messages: Message[], model: string, maxTokens: number) =>
       messages,
       maxTokens,
     }),
-  })
-    .then((res) => (res.ok ? res.json() : res.text()))
-    .then((res) => res.choices?.[0]?.message?.content);
+  }).then((res) => (res.ok ? res.json() : res.text()));
 
 const queryHuggingface = (
   messages: Message[],
@@ -69,13 +67,13 @@ const queryHuggingface = (
     method: "POST",
     body: JSON.stringify({ messages, model, maxTokens }),
   }).then((res) => (res.ok ? res.json() : res.text()));
-// .then((res) => res?.choices?.[0]?.message.content);
 
 export function App() {
   const [chat, setChat] = useState<Message[]>([]);
   const [model, setModel] = useState(models[2]);
-  const [respLength, setRespLength] = useState(50);
+  const [respLength, setRespLength] = useState(1024);
   const [currToken, setCurrentTokens] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const onPrompt = async (prompt: string) => {
     const _chat = [
@@ -95,8 +93,9 @@ export function App() {
       setChat((c) => [...c, { role: "assistant", content: msg }]);
     }
     if (model.type === "ollama") {
-      const resp = await queryOllama(_chat, model.id, 100);
-      setChat((c) => [...c, { role: "assistant", content: resp }]);
+      const resp = await queryOllama(_chat, model.id, respLength);
+      const msg = resp.choices?.[0]?.message?.content;
+      setChat((c) => [...c, { role: "assistant", content: msg }]);
     }
     if (model.type === "huggingface") {
       const resp = await queryHuggingface(_chat, model.id, respLength);
@@ -125,24 +124,22 @@ export function App() {
       <div className="grid grid-cols-[1fr_4fr_1fr] gap-2">
         <div></div>
 
-        <main className=" h-[calc(100vh-40px)]    grid grid-rows-[1fr_auto]    ">
+        <main className=" h-[calc(100vh-40px)] flex flex-col  ">
+          <div ref={scrollRef} className=" grow  space-y-4  overflow-auto  ">
+            {chat.length === 0 && (
+              <div key="empty" className=" bg-slate-200 rounded  text-center">
+                <p>start YOur conversetion</p>
+              </div>
+            )}
+            {chat.map((msg, i) => (
+              <div key={i} className=" border border-slate-300">
+                <span>{msg.role}</span>
+                <Markdown>{msg.content}</Markdown>
+              </div>
+            ))}
+          </div>
           <div className=" p-2 row-start-3 ">
             <Prompter onPrompt={onPrompt} />
-          </div>
-          <div className="  space-y-4   ">
-            <div className=" overflow-auto">
-              {chat.length === 0 && (
-                <div key="empty" className=" bg-slate-300">
-                  <p>start YOur conversetion</p>
-                </div>
-              )}
-              {chat.map((msg, i) => (
-                <div key={i} className=" border border-slate-300">
-                  <span>{msg.role}</span>
-                  <p>{msg.content}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </main>
         <aside className="p-2  space-y-6 ">
@@ -153,7 +150,10 @@ export function App() {
                 <li key={mod.id}>
                   <button
                     onClick={() => newModelChat(m)}
-                    className="text-sm w-full px-2 rounded hover:bg-slate-100 text-left whitespace-pre flex gap-2"
+                    className={
+                      "text-sm w-full px-2 rounded hover:bg-slate-100 text-left whitespace-pre flex gap-2 " +
+                      (model.id === mod.id ? " bg-slate-200 " : " ")
+                    }
                   >
                     <ModelIcon type={mod.type} />
                     {mod.name}
