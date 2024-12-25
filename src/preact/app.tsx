@@ -70,7 +70,7 @@ const queryHuggingface = (
 
 export function App() {
   const [chat, setChat] = useState<Message[]>([]);
-  const [model, setModel] = useState(models[2]);
+  const [model, setModel] = useState(models[0]);
   const [respLength, setRespLength] = useState(1024);
   const [currToken, setCurrentTokens] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -112,7 +112,7 @@ export function App() {
   };
 
   return (
-    <>
+    <div className=" bg-stone-400">
       <header className=" py-2 flex justify-between">
         <span>Chatter</span>
         <div>
@@ -127,12 +127,12 @@ export function App() {
         <main className=" h-[calc(100vh-40px)] flex flex-col  ">
           <div ref={scrollRef} className=" grow  space-y-4  overflow-auto  ">
             {chat.length === 0 && (
-              <div key="empty" className=" bg-slate-200 rounded  text-center">
+              <div key="empty" className=" bg-stone-300 rounded  text-center">
                 <p>start YOur conversetion</p>
               </div>
             )}
             {chat.map((msg, i) => (
-              <div key={i} className=" border border-slate-300">
+              <div key={i} className=" border border-stone-700">
                 <span>{msg.role}</span>
                 <Markdown>{msg.content}</Markdown>
               </div>
@@ -151,8 +151,8 @@ export function App() {
                   <button
                     onClick={() => newModelChat(m)}
                     className={
-                      "text-sm w-full px-2 rounded hover:bg-slate-100 text-left whitespace-pre flex gap-2 " +
-                      (model.id === mod.id ? " bg-slate-200 " : " ")
+                      "text-sm w-full px-2 rounded hover:bg-stone-300 hover:bg-opacity-50 text-left whitespace-pre flex gap-2 " +
+                      (model.id === mod.id ? " bg-stone-300 " : " ")
                     }
                   >
                     <ModelIcon type={mod.type} />
@@ -169,7 +169,7 @@ export function App() {
               <label className=" ">{"max tokens"}</label>
               <input
                 type="number"
-                className="ml-auto bg-slate-100 p-1  w-16"
+                className="ml-auto bg-stone-300 p-1  w-16"
                 value={respLength}
                 onInput={(ev) => setRespLength(+ev.currentTarget.value)}
               />
@@ -181,7 +181,7 @@ export function App() {
           </div>
         </aside>
       </div>
-    </>
+    </div>
   );
 }
 
@@ -237,7 +237,7 @@ function Prompter({ onPrompt }: { onPrompt: (p: string) => void }) {
         <div className=" w-full flex">
           <textarea
             name="prompt"
-            className="grow p-2 w-3/4 max-w-[800px] border border-slate-500"
+            className="grow p-2 w-3/4 max-w-[800px] border border-stone-700 bg-transparent"
             rows={4}
             onKeyDown={keyEvent}
             value={textValue}
@@ -245,7 +245,7 @@ function Prompter({ onPrompt }: { onPrompt: (p: string) => void }) {
           />
           <div className=" flex flex-col gap-1 p-1">
             <SpeechTranscription updateTranscript={onTranscript} />
-            <button class=" px-2 border border-slate-700" type="submit">
+            <button class=" px-2 border border-stone-700" type="submit">
               Send
             </button>
           </div>
