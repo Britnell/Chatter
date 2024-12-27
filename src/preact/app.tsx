@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
 import Anthropic from "@anthropic-ai/sdk";
-import { ANTHROPIC_API } from "astro:env/client";
+import { ANTHROPIC_API, HUGGINGFACE_TOKEN } from "astro:env/client";
 import { models } from "./model";
 
 const client = new Anthropic({
@@ -56,10 +56,22 @@ const queryHuggingface = async (
   maxTokens: number,
   onStream: (answ: string) => void
 ) => {
-  const resp = await fetch("/api/huggingface", {
-    method: "POST",
-    body: JSON.stringify({ messages, model, maxTokens }),
-  });
+  const resp = await fetch(
+    `https://api-inference.huggingface.co/models/${model}/v1/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${HUGGINGFACE_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        messages,
+        model,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
+    }
+  );
   readStream(resp, onStream);
 };
 
@@ -103,7 +115,6 @@ export function App() {
   const [chat, setChat] = useState<Message[]>([]);
   const [model, setModel] = useState(models[0]);
   const [respLength, setRespLength] = useState(512);
-  const [currToken, setCurrentTokens] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const onPrompt = async (prompt: string) => {
@@ -209,10 +220,6 @@ export function App() {
                 onInput={(ev) => setRespLength(+ev.currentTarget.value)}
               />
             </div>
-            <p className=" text-xs flex">
-              tokens used
-              <span className="ml-auto px-2">{currToken}</span>
-            </p>
           </div>
         </aside>
       </div>
@@ -290,6 +297,13 @@ function Prompter({ onPrompt }: { onPrompt: (p: string) => void }) {
   );
 }
 
+declare global {
+  interface Window {
+    SpeechRecognition: any;
+    webkitSpeechRecognition: any;
+  }
+}
+
 const SpeechTranscription = ({
   updateTranscript,
 }: {
@@ -331,7 +345,6 @@ const SpeechTranscription = ({
     recognition.onerror = (ev: any) => {
       setIsListening(false);
     };
-    // recognition.onend = () => {};
 
     recognition.start();
 
