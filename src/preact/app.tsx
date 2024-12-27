@@ -1,49 +1,41 @@
 import { useState, useCallback, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
+import Anthropic from "@anthropic-ai/sdk";
+import { ANTHROPIC_API } from "astro:env/client";
+import { models } from "./model";
+
+const client = new Anthropic({
+  apiKey: ANTHROPIC_API,
+  dangerouslyAllowBrowser: true,
+});
 
 type Message = {
-  role: string;
+  role: "user" | "assistant";
   content: string;
 };
 
-const models = [
-  {
-    type: "huggingface",
-    name: "Qwen Coder 32B",
-    id: "Qwen/Qwen2.5-Coder-32B-Instruct",
-  },
-  {
-    type: "huggingface",
-    name: "QwQ 32B",
-    id: "Qwen/QwQ-32B-Preview",
-  },
-  {
-    type: "claude",
-    name: "haiku fastest",
-    id: "claude-3-haiku-20240307",
-  },
-  {
-    type: "claude",
-    name: "haiku best",
-    id: "claude-3-5-haiku-20241022",
-  },
-  {
-    type: "ollama",
-    name: "deepseek coder",
-    id: "deepseek-coder-v2",
-  },
-  {
-    type: "ollama",
-    name: "Qwen Coder",
-    id: "qwen2.5-coder:14b",
-  },
-];
-
-const queryClaude = (messages: Message[], model: string, maxTokens: number) =>
-  fetch("/api/claude", {
-    method: "POST",
-    body: JSON.stringify({ messages, model, maxTokens }),
-  }).then((res) => (res.ok ? res.json() : res.text()));
+const queryClaude = async (
+  messages: Message[],
+  model: string,
+  maxTokens: number,
+  onStream: (ans: string) => void
+) => {
+  const stream = await client.messages.create({
+    // max_tokens: 20,
+    max_tokens: maxTokens,
+    model,
+    messages,
+    stream: true,
+  });
+  let answer = "";
+  for await (const chunk of stream) {
+    if (chunk.type === "content_block_delta") {
+      // @ts-ignore
+      answer += chunk.delta.text;
+      onStream(answer);
+    }
+  }
+};
 
 const queryOllama = (messages: Message[], model: string, maxTokens: number) =>
   fetch("http://localhost:11434/v1/chat/completions", {
@@ -58,19 +50,22 @@ const queryOllama = (messages: Message[], model: string, maxTokens: number) =>
     }),
   }).then((res) => (res.ok ? res.json() : res.text()));
 
-const queryHuggingface = (
+const queryHuggingface = async (
   messages: Message[],
   model: string,
-  maxTokens: number
-) =>
-  fetch("/api/huggingface", {
+  maxTokens: number,
+  onStream: (answ: string) => void
+) => {
+  const resp = await fetch("/api/huggingface", {
     method: "POST",
     body: JSON.stringify({ messages, model, maxTokens }),
-  }); //.then((res) => (res.ok ? res.json() : res.text()));
+  });
+  readStream(resp, onStream);
+};
 
 const readStream = async (
   response: Response,
-  onStreamUpdate: (answ: string) => void
+  onStream: (answ: string) => void
 ) => {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
@@ -95,7 +90,7 @@ const readStream = async (
           answer += content;
           chunks++;
           if (chunks % 2 === 0) {
-            onStreamUpdate(answer);
+            onStream(answer);
           }
         }
       } catch {}
@@ -117,16 +112,17 @@ export function App() {
       {
         role: "user",
         content: prompt,
-      },
+      } as const,
     ];
 
     setChat(_chat);
     if (model.type === "claude") {
-      const resp = await queryClaude(_chat, model.id, respLength);
-      const msg = resp?.content?.[0]?.text;
-      const tokens = resp?.usage?.input_tokens + resp?.usage?.output_tokens;
-      setCurrentTokens((t) => t + tokens);
-      setChat((c) => [...c, { role: "assistant", content: msg }]);
+      setChat((c) => [...c, { role: "assistant", content: "" }]);
+      queryClaude(_chat, model.id, respLength, (answ: string) => {
+        setChat((c) =>
+          c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
+        );
+      });
     }
     if (model.type === "ollama") {
       const resp = await queryOllama(_chat, model.id, respLength);
@@ -134,20 +130,14 @@ export function App() {
       setChat((c) => [...c, { role: "assistant", content: msg }]);
     }
     if (model.type === "huggingface") {
-      const resp = await queryHuggingface(_chat, model.id, respLength);
       setChat((c) => [...c, { role: "assistant", content: "" }]);
-
-      const final = await readStream(resp, (answ: string) => {
+      queryHuggingface(_chat, model.id, respLength, (steamAns: string) => {
         setChat((c) =>
-          c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
+          c.map((ch, i) =>
+            i === c.length - 1 ? { ...ch, content: steamAns } : ch
+          )
         );
       });
-      setChat((c) =>
-        c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: final } : ch))
-      );
-
-      // setCurrentTokens((t) => t + tokens);
-      // setChat((c) => [...c, { role: "assistant", content: msg }]);
     }
   };
 

@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 
 export const prerender = false;
 
-const huggingface_token = import.meta.env.VITE_HUGGINGFACE_TOKEN;
+const huggingface_token = import.meta.env.HUGGINGFACE_TOKEN;
 
 export const POST: APIRoute = async ({ request }) => {
   const { messages, model, maxTokens } = await request.json();

@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, envField } from 'astro/config';
 
 import preact from '@astrojs/preact';
 
@@ -15,5 +15,12 @@ export default defineConfig({
   adapter: node({
     mode: 'standalone'
   }),
-  output: 'static'
+  output: 'static',
+  env: {
+    schema: {
+      ANTHROPIC_API: envField.string({
+        context:'client',access: 'public', optional: false
+      })
+    }
+  }
 });
