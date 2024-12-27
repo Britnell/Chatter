@@ -43,8 +43,7 @@ export default function Prompter({
       <div className="max-w-[800px] mx-auto p-2 w-full flex">
         <textarea
           name="prompt"
-          className=" grow p-2 w-3/4 max-w-[800px] bg-stone-300 "
-          rows={4}
+          className=" h-32 text-sm grow p-1 w-3/4 max-w-[800px] bg-stone-300 "
           onKeyDown={keyEvent}
           value={textValue}
           onInput={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
