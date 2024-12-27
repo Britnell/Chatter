@@ -65,9 +65,9 @@ export function App() {
         <span></span>
       </header>
       <div className="grid grid-cols-[1fr_4fr_1fr] gap-2">
-        <div></div>
+        <div>.</div>
 
-        <main className=" h-[calc(100vh-40px)] flex flex-col  ">
+        <main className="  h-[calc(100vh-40px)] max-w-5xl flex flex-col pt-2">
           <div ref={scrollRef} className=" grow  space-y-4  overflow-auto  ">
             {chat.length === 0 && (
               <div key="empty" className=" bg-stone-300 rounded  text-center">
@@ -75,16 +75,23 @@ export function App() {
               </div>
             )}
             {chat.map((msg, i) => (
-              <div key={i} className=" border border-stone-700">
-                <span>{msg.role}</span>
-                <Markdown>{msg.content}</Markdown>
+              <div
+                key={i}
+                className={
+                  "  max-w-[70ch] " +
+                  (msg.role === "assistant" ? " ml-auto " : "")
+                }
+              >
+                <span className="px-3 ">{msg.role}</span>
+                <div className=" bg-stone-300 rounded-lg px-3 py-2 ">
+                  <Markdown>{msg.content}</Markdown>
+                </div>
               </div>
             ))}
           </div>
-          <div className=" p-2 row-start-3 ">
-            <Prompter onPrompt={onPrompt} />
-          </div>
+          <Prompter onPrompt={onPrompt} />
         </main>
+
         <aside className="p-2  space-y-6 ">
           <div>
             <h2>Model</h2>
@@ -94,7 +101,7 @@ export function App() {
                   <button
                     onClick={() => newModelChat(m)}
                     className={
-                      "text-sm w-full px-2 rounded hover:bg-stone-300 hover:bg-opacity-50 text-left whitespace-pre flex gap-2 " +
+                      "text-sm w-full px-2 rounded hover:bg-stone-300 hover:bg-opacity-50 text-left text-stone-700 whitespace-pre flex gap-2 " +
                       (model.id === mod.id ? " bg-stone-300 " : " ")
                     }
                   >
