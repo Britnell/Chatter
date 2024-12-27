@@ -7,7 +7,7 @@ const huggingface_token = import.meta.env.VITE_HUGGINGFACE_TOKEN;
 export const POST: APIRoute = async ({ request }) => {
   const { messages, model, maxTokens } = await request.json();
 
-  const resp = await fetch(
+  return fetch(
     `https://api-inference.huggingface.co/models/${model}/v1/chat/completions`,
     {
       method: "POST",
@@ -19,12 +19,8 @@ export const POST: APIRoute = async ({ request }) => {
         messages,
         model,
         max_tokens: maxTokens,
-        stream: false,
+        stream: true,
       }),
     }
-  ).then((res) => (res.ok ? res.json() : res.text()));
-
-  return new Response(JSON.stringify(resp), {
-    headers: { "Content-Type": "application/json" },
-  });
+  );
 };

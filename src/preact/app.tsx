@@ -66,12 +66,48 @@ const queryHuggingface = (
   fetch("/api/huggingface", {
     method: "POST",
     body: JSON.stringify({ messages, model, maxTokens }),
-  }).then((res) => (res.ok ? res.json() : res.text()));
+  }); //.then((res) => (res.ok ? res.json() : res.text()));
+
+const readStream = async (
+  response: Response,
+  onStreamUpdate: (answ: string) => void
+) => {
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let answer = "";
+  let chunks = 0;
+
+  while (reader) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    const lines = chunk.split("\n");
+
+    lines.forEach((line) => {
+      if (!line.trim()) return;
+      if (!line.startsWith("data: ")) return;
+      const jsonStr = line.slice(5);
+      try {
+        const data = JSON.parse(jsonStr);
+        const content = data.choices[0]?.delta?.content;
+        if (content) {
+          answer += content;
+          chunks++;
+          if (chunks % 2 === 0) {
+            onStreamUpdate(answer);
+          }
+        }
+      } catch {}
+    });
+  }
+  return answer;
+};
 
 export function App() {
   const [chat, setChat] = useState<Message[]>([]);
   const [model, setModel] = useState(models[0]);
-  const [respLength, setRespLength] = useState(1024);
+  const [respLength, setRespLength] = useState(512);
   const [currToken, setCurrentTokens] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -99,10 +135,19 @@ export function App() {
     }
     if (model.type === "huggingface") {
       const resp = await queryHuggingface(_chat, model.id, respLength);
-      const msg = resp?.choices?.[0]?.message.content;
-      const tokens = resp?.usage?.total_tokens;
-      setCurrentTokens((t) => t + tokens);
-      setChat((c) => [...c, { role: "assistant", content: msg }]);
+      setChat((c) => [...c, { role: "assistant", content: "" }]);
+
+      const final = await readStream(resp, (answ: string) => {
+        setChat((c) =>
+          c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
+        );
+      });
+      setChat((c) =>
+        c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: final } : ch))
+      );
+
+      // setCurrentTokens((t) => t + tokens);
+      // setChat((c) => [...c, { role: "assistant", content: msg }]);
     }
   };
 
@@ -287,7 +332,6 @@ const SpeechTranscription = ({
       const final = event.results[current].isFinal;
       if (final) setIsListening(false);
       updateTranscript(transcription, final);
-      // setTranscript(transcription);
     };
 
     recognition.onstart = () => {
@@ -295,13 +339,9 @@ const SpeechTranscription = ({
     };
 
     recognition.onerror = (ev: any) => {
-      console.error("Speech recognition error:", ev.error);
       setIsListening(false);
     };
-
-    recognition.onend = () => {
-      // console.log("onend ", { transcript });
-    };
+    // recognition.onend = () => {};
 
     recognition.start();
 
