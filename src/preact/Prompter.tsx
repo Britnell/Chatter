@@ -40,22 +40,20 @@ export default function Prompter({
 
   return (
     <form onSubmit={onSubmit}>
-      <div className=" max-w-[800px] mx-auto">
-        <div className=" w-full flex">
-          <textarea
-            name="prompt"
-            className="grow p-2 w-3/4 max-w-[800px] border border-stone-700 bg-transparent"
-            rows={4}
-            onKeyDown={keyEvent}
-            value={textValue}
-            onInput={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
-          />
-          <div className=" flex flex-col gap-1 p-1">
-            <SpeechTranscription updateTranscript={onTranscript} />
-            <button class=" px-2 border border-stone-700" type="submit">
-              Send
-            </button>
-          </div>
+      <div className="max-w-[800px] mx-auto p-2 w-full flex">
+        <textarea
+          name="prompt"
+          className=" grow p-2 w-3/4 max-w-[800px] bg-stone-300 "
+          rows={4}
+          onKeyDown={keyEvent}
+          value={textValue}
+          onInput={(e) => setPrompt((e.target as HTMLTextAreaElement).value)}
+        />
+        <div className=" flex flex-col gap-1 pl-1">
+          <SpeechTranscription updateTranscript={onTranscript} />
+          <button class=" px-2 border border-stone-700" type="submit">
+            Send
+          </button>
         </div>
       </div>
     </form>
@@ -70,15 +68,11 @@ const SpeechTranscription = ({
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
 
-  const startListening = useCallback(() => {
-    if (
-      !("webkitSpeechRecognition" in window) &&
-      !("SpeechRecognition" in window)
-    ) {
-      alert("Speech recognition is not supported in this browser");
-      return;
-    }
+  const notSupported =
+    !("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window);
+  if (notSupported) return null;
 
+  const startListening = useCallback(() => {
     const SpeechRecognition =
       window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
