@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "preact/hooks";
+import { useCallback, useEffect, useRef, useState } from "preact/hooks";
 
 export default function Prompter({
   onPrompt,
@@ -67,10 +67,13 @@ const SpeechTranscription = ({
 }) => {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<any>(null);
+  const [hide, setHide] = useState(true);
 
-  const notSupported =
-    !("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window);
-  if (notSupported) return null;
+  useEffect(() => {
+    const supported =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    setHide(!supported);
+  }, []);
 
   const startListening = useCallback(() => {
     const SpeechRecognition =
@@ -104,6 +107,8 @@ const SpeechTranscription = ({
       recognition.stop();
     };
   }, []);
+
+  if (hide) return null;
 
   return (
     <button
