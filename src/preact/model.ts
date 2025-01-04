@@ -15,13 +15,18 @@ export const models = [
   },
   {
     type: "claude",
-    name: "haiku fastest",
-    id: "claude-3-haiku-20240307",
+    name: "haiku 3.5",
+    id: "claude-3-5-haiku-20241022",
   },
+  // {
+  //   type: "claude",
+  //   name: "haiku 3.0",
+  //   id: "claude-3-haiku-20240307",
+  // },
   {
     type: "claude",
-    name: "haiku best",
-    id: "claude-3-5-haiku-20241022",
+    name: "Sonnet 3.5",
+    id: "claude-3-5-sonnet-20241022 ",
   },
   {
     type: "ollama",
