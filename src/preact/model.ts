@@ -127,6 +127,7 @@ export const queryClaude = async (
       onStream(answer);
     }
   }
+  return answer;
 };
 
 export const queryOllama = (
@@ -175,7 +176,7 @@ export const queryElevenStream = async (text: string) => {
       method: "POST",
       headers: {
         Accept: "application/json",
-        "xi-api-key": ELEVEN_KEY,
+        "xi-api-key": ELEVEN_KEY ?? "",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({

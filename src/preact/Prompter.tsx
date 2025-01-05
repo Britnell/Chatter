@@ -88,7 +88,10 @@ const SpeechTranscription = ({
       const current = event.resultIndex;
       const transcription = event.results[current][0].transcript;
       const final = event.results[current].isFinal;
-      if (final) setIsListening(false);
+      if (final) {
+        setIsListening(false);
+        recognition.stop();
+      }
       updateTranscript(transcription, final);
     };
 
