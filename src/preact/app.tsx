@@ -13,7 +13,7 @@ export function App() {
   const [model, setModel] = useState(models[0]);
   const [respLength, setRespLength] = useState(512);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [reading, setReading] = useState(false);
+  const [readResp, setReadResp] = useState(false);
 
   const onPrompt = async (prompt: string) => {
     const _chat = [
@@ -27,11 +27,19 @@ export function App() {
     setChat(_chat);
     if (model.type === "claude") {
       setChat((c) => [...c, { role: "assistant", content: "" }]);
-      queryClaude(_chat, model.id, respLength, (answ: string) => {
-        setChat((c) =>
-          c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
-        );
-      });
+      const answ = await queryClaude(
+        _chat,
+        model.id,
+        respLength,
+        (answ: string) => {
+          setChat((c) =>
+            c.map((ch, i) =>
+              i === c.length - 1 ? { ...ch, content: answ } : ch
+            )
+          );
+        }
+      );
+      if (readResp) speakText(answ);
     }
     if (model.type === "ollama") {
       const resp = await queryOllama(_chat, model.id, respLength);
@@ -54,8 +62,7 @@ export function App() {
         }
       );
 
-      if (!reading) return;
-      speakText(answ);
+      if (readResp) speakText(answ);
     }
   };
 
@@ -141,17 +148,19 @@ export function App() {
                 type="number"
                 className="ml-auto bg-stone-300 p-1  w-16"
                 value={respLength}
-                onInput={(ev) => setRespLength(+ev.currentTarget.value)}
+                onChange={(ev) => setRespLength(+ev.currentTarget.value)}
               />
             </div>
             <div className="x">
               <input
                 type="checkbox"
-                id="reading"
-                checked={reading}
-                onChange={() => setReading(!reading)}
+                id="readResp"
+                checked={readResp}
+                onChange={(ev) => {
+                  setReadResp((ev.target as HTMLInputElement).checked);
+                }}
               />
-              <label for="reading">Read answers</label>
+              <label for="readResp">Read answers</label>
             </div>
           </div>
         </aside>
