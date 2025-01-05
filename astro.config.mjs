@@ -31,6 +31,11 @@ export default defineConfig({
         access: "public",
         optional: false,
       }),
+      ELEVEN_KEY: envField.string({
+        context: "client",
+        access: "public",
+        optional: true,
+      }),
     },
   },
 });
