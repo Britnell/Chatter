@@ -13,6 +13,7 @@ export function App() {
   const [model, setModel] = useState(models[0]);
   const [respLength, setRespLength] = useState(512);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [reading, setReading] = useState(false);
 
   const onPrompt = async (prompt: string) => {
     const _chat = [
@@ -39,14 +40,33 @@ export function App() {
     }
     if (model.type === "huggingface") {
       setChat((c) => [...c, { role: "assistant", content: "" }]);
-      queryHuggingface(_chat, model.id, respLength, (steamAns: string) => {
-        setChat((c) =>
-          c.map((ch, i) =>
-            i === c.length - 1 ? { ...ch, content: steamAns } : ch
-          )
-        );
-      });
+
+      const answ = await queryHuggingface(
+        _chat,
+        model.id,
+        respLength,
+        (steamAns: string) => {
+          setChat((c) =>
+            c.map((ch, i) =>
+              i === c.length - 1 ? { ...ch, content: steamAns } : ch
+            )
+          );
+        }
+      );
+
+      if (!reading) return;
+      speakText(answ);
     }
+  };
+
+  const speakText = (text: string) => {
+    return new Promise((resolve, reject) => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "en-GB";
+      utterance.pitch = 1;
+      utterance.onend = () => resolve(null);
+      window.speechSynthesis.speak(utterance);
+    });
   };
 
   const newModelChat = (m: number) => {
@@ -92,7 +112,7 @@ export function App() {
           <Prompter onPrompt={onPrompt} />
         </main>
 
-        <aside className="p-2  space-y-6 ">
+        <aside className="p-2  space-y-6 flex flex-col justify-center items-stretch ">
           <div>
             <h2>Model</h2>
             <ul>
@@ -123,6 +143,15 @@ export function App() {
                 value={respLength}
                 onInput={(ev) => setRespLength(+ev.currentTarget.value)}
               />
+            </div>
+            <div className="x">
+              <input
+                type="checkbox"
+                id="reading"
+                checked={reading}
+                onChange={() => setReading(!reading)}
+              />
+              <label for="reading">Read answers</label>
             </div>
           </div>
         </aside>

@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ANTHROPIC_API, HUGGINGFACE_TOKEN } from "astro:env/client";
+import { ANTHROPIC_API, HUGGINGFACE_TOKEN, ELEVEN_KEY } from "astro:env/client";
 import type { Message } from "./app";
 
 export const models = [
@@ -24,11 +24,6 @@ export const models = [
   //   id: "claude-3-haiku-20240307",
   // },
   {
-    type: "claude",
-    name: "Sonnet 3.5",
-    id: "claude-3-5-sonnet-20241022 ",
-  },
-  {
     type: "ollama",
     name: "deepseek coder",
     id: "deepseek-coder-v2",
@@ -37,6 +32,11 @@ export const models = [
     type: "ollama",
     name: "Qwen Coder",
     id: "qwen2.5-coder:14b",
+  },
+  {
+    type: "claude",
+    name: "Sonnet 3.5",
+    id: "claude-3-5-sonnet-20241022",
   },
 ];
 
@@ -62,7 +62,7 @@ export const queryHuggingface = async (
       }),
     }
   );
-  readStream(resp, onStream);
+  return readStream(resp, onStream);
 };
 
 const readStream = async (
@@ -145,3 +145,74 @@ export const queryOllama = (
       maxTokens,
     }),
   }).then((res) => (res.ok ? res.json() : res.text()));
+
+const voiceid = "VuJ05kimyrfnJmOxLh2k";
+
+export const queryEleven = (text: string) =>
+  fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceid}` +
+      "?output_format=mp3_22050_32",
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "xi-api-key": ELEVEN_KEY ?? "",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_monolingual_v1",
+      }),
+    }
+  )
+    .then((resp) => resp.blob())
+    .then((blob) => window.URL.createObjectURL(blob));
+
+export const queryElevenStream = async (text: string) => {
+  const resp = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceid}/stream`,
+    {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "xi-api-key": ELEVEN_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_monolingual_v1",
+      }),
+    }
+  );
+
+  if (!resp.ok || !resp.body) {
+    throw new Error(`HTTP error! status: ${resp.status}`);
+  }
+
+  const reader = resp.body.getReader();
+  const chunks: Uint8Array[] = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    chunks.push(value);
+  }
+
+  // Combine all chunks into a single Uint8Array
+  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+  const combinedChunks = new Uint8Array(totalLength);
+  let position = 0;
+
+  for (const chunk of chunks) {
+    combinedChunks.set(chunk, position);
+    position += chunk.length;
+  }
+
+  // Convert to blob and create URL
+  const blob = new Blob([combinedChunks], { type: "audio/mpeg" });
+  return window.URL.createObjectURL(blob);
+};
