@@ -28,42 +28,24 @@ export function App() {
     ];
 
     setChat([..._chat, { role: "assistant", content: "" }]);
+    if (readResp) reader.restart();
+
+    const onStream = (answ: string) => {
+      if (readResp) reader.readStream(answ);
+      setChat((c) =>
+        c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
+      );
+    };
 
     if (model.type === "claude") {
-      const answ = await queryClaude(
-        _chat,
-        model.id,
-        respLength,
-        (answ: string) => {
-          setChat((c) =>
-            c.map((ch, i) =>
-              i === c.length - 1 ? { ...ch, content: answ } : ch
-            )
-          );
-        }
-      );
-      if (readResp) speakText(answ);
+      await queryClaude(_chat, model.id, respLength, onStream);
     }
 
     if (model.type === "huggingface") {
-      if (readResp) reader.restart();
-
-      await queryHuggingface(
-        _chat,
-        model.id,
-        respLength,
-        (streamAns: string) => {
-          if (readResp) reader.readStream(streamAns);
-          setChat((c) =>
-            c.map((ch, i) =>
-              i === c.length - 1 ? { ...ch, content: streamAns } : ch
-            )
-          );
-        }
-      );
-
-      if (readResp) reader.endOfStream();
+      await queryHuggingface(_chat, model.id, respLength, onStream);
     }
+
+    if (readResp) reader.endOfStream();
 
     // if (model.type === "ollama") {
     //   const resp = await queryOllama(_chat, model.id, respLength);
