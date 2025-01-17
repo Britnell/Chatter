@@ -2,6 +2,7 @@ import { useState, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
 import { models, queryClaude, queryHuggingface, queryOllama } from "./model";
 import Prompter from "./Prompter";
+import { speakText, useReader } from "./reader";
 
 export type Message = {
   role: "user" | "assistant";
@@ -14,6 +15,8 @@ export function App() {
   const [respLength, setRespLength] = useState(512);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [readResp, setReadResp] = useState(false);
+
+  const reader = useReader();
 
   const onPrompt = async (prompt: string) => {
     const _chat = [
@@ -41,39 +44,33 @@ export function App() {
       );
       if (readResp) speakText(answ);
     }
-    if (model.type === "ollama") {
-      const resp = await queryOllama(_chat, model.id, respLength);
-      const msg = resp.choices?.[0]?.message?.content;
-      setChat((c) => [...c, { role: "assistant", content: msg }]);
-    }
+
     if (model.type === "huggingface") {
       setChat((c) => [...c, { role: "assistant", content: "" }]);
+      if (readResp) reader.restart();
 
-      const answ = await queryHuggingface(
+      await queryHuggingface(
         _chat,
         model.id,
         respLength,
-        (steamAns: string) => {
+        (streamAns: string) => {
+          if (readResp) reader.readStream(streamAns);
           setChat((c) =>
             c.map((ch, i) =>
-              i === c.length - 1 ? { ...ch, content: steamAns } : ch
+              i === c.length - 1 ? { ...ch, content: streamAns } : ch
             )
           );
         }
       );
 
-      if (readResp) speakText(answ);
+      if (readResp) reader.endOfStream();
     }
-  };
 
-  const speakText = (text: string) => {
-    return new Promise((resolve, reject) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "en-GB";
-      utterance.pitch = 1;
-      utterance.onend = () => resolve(null);
-      window.speechSynthesis.speak(utterance);
-    });
+    if (model.type === "ollama") {
+      const resp = await queryOllama(_chat, model.id, respLength);
+      const msg = resp.choices?.[0]?.message?.content;
+      setChat((c) => [...c, { role: "assistant", content: msg }]);
+    }
   };
 
   const newModelChat = (m: number) => {
