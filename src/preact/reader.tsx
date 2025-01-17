@@ -37,6 +37,11 @@ export const useReader = () => {
     streamComplete.current = true;
   };
 
+  const stopReading = () => {
+    reading.current = false;
+    window.speechSynthesis.cancel();
+  };
+
   function readStream(text: string) {
     const split = splitIntoSentences(text);
 
@@ -54,21 +59,14 @@ export const useReader = () => {
 
   const readingLoop = async () => {
     const next = sentences.current[sntncsIndex.current];
-    console.log({ next });
     await speakText(next);
     sntncsIndex.current++;
 
-    console.log({
-      cmp: streamComplete.current,
-      si: sntncsIndex.current,
-      sent: sentences.current,
-    });
-
     if (
+      reading.current &&
       streamComplete.current &&
       sntncsIndex.current >= sentences.current.length
     ) {
-      console.log(" were done");
       return;
     }
 
@@ -80,5 +78,6 @@ export const useReader = () => {
     readStream,
     restart,
     endOfStream,
+    stopReading,
   };
 };

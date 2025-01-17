@@ -10,18 +10,28 @@ export const models = [
   },
   {
     type: "huggingface",
+    name: "Llama 3.2 11B",
+    id: "meta-llama/Llama-3.2-11B-Vision-Instruct",
+  },
+  // {
+  //   type: "huggingface",
+  //   name: "Llama 3.3 70B",
+  //   id: "meta-llama/Llama-3.3-70B-Instruct",
+  // },
+  {
+    type: "huggingface",
     name: "QwQ 32B",
     id: "Qwen/QwQ-32B-Preview",
   },
   {
     type: "claude",
-    name: "haiku 3.5",
-    id: "claude-3-5-haiku-20241022",
+    name: "haiku 3.0",
+    id: "claude-3-haiku-20240307",
   },
   {
     type: "claude",
-    name: "haiku 3.0",
-    id: "claude-3-haiku-20240307",
+    name: "haiku 3.5",
+    id: "claude-3-5-haiku-20241022",
   },
   // {
   //   type: "ollama",

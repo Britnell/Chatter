@@ -2,7 +2,7 @@ import { useState, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
 import { models, queryClaude, queryHuggingface } from "./model";
 import Prompter from "./Prompter";
-import { speakText, useReader } from "./reader";
+import { useReader } from "./reader";
 
 export type Message = {
   role: "user" | "assistant";
@@ -141,6 +141,9 @@ export function App() {
                 }}
               />
               <label for="readResp">Read answers</label>
+            </div>
+            <div className="x">
+              <button onClick={reader.stopReading}>stop reading</button>
             </div>
           </div>
         </aside>
