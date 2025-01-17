@@ -18,21 +18,21 @@ export const models = [
     name: "haiku 3.5",
     id: "claude-3-5-haiku-20241022",
   },
+  {
+    type: "claude",
+    name: "haiku 3.0",
+    id: "claude-3-haiku-20240307",
+  },
   // {
-  //   type: "claude",
-  //   name: "haiku 3.0",
-  //   id: "claude-3-haiku-20240307",
+  //   type: "ollama",
+  //   name: "deepseek coder",
+  //   id: "deepseek-coder-v2",
   // },
-  {
-    type: "ollama",
-    name: "deepseek coder",
-    id: "deepseek-coder-v2",
-  },
-  {
-    type: "ollama",
-    name: "Qwen Coder",
-    id: "qwen2.5-coder:14b",
-  },
+  // {
+  //   type: "ollama",
+  //   name: "Qwen Coder",
+  //   id: "qwen2.5-coder:14b",
+  // },
   {
     type: "claude",
     name: "Sonnet 3.5",

@@ -1,6 +1,6 @@
 import { useState, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
-import { models, queryClaude, queryHuggingface, queryOllama } from "./model";
+import { models, queryClaude, queryHuggingface } from "./model";
 import Prompter from "./Prompter";
 import { speakText, useReader } from "./reader";
 
@@ -19,17 +19,17 @@ export function App() {
   const reader = useReader();
 
   const onPrompt = async (prompt: string) => {
-    const _chat = [
+    const _chat: Message[] = [
       ...chat,
       {
         role: "user",
         content: prompt,
-      } as const,
+      },
     ];
 
-    setChat(_chat);
+    setChat([..._chat, { role: "assistant", content: "" }]);
+
     if (model.type === "claude") {
-      setChat((c) => [...c, { role: "assistant", content: "" }]);
       const answ = await queryClaude(
         _chat,
         model.id,
@@ -46,7 +46,6 @@ export function App() {
     }
 
     if (model.type === "huggingface") {
-      setChat((c) => [...c, { role: "assistant", content: "" }]);
       if (readResp) reader.restart();
 
       await queryHuggingface(
@@ -66,11 +65,13 @@ export function App() {
       if (readResp) reader.endOfStream();
     }
 
-    if (model.type === "ollama") {
-      const resp = await queryOllama(_chat, model.id, respLength);
-      const msg = resp.choices?.[0]?.message?.content;
-      setChat((c) => [...c, { role: "assistant", content: msg }]);
-    }
+    // if (model.type === "ollama") {
+    //   const resp = await queryOllama(_chat, model.id, respLength);
+    //   const msg = resp.choices?.[0]?.message?.content;
+    //   setChat((c) =>
+    //     c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: msg } : ch))
+    //   );
+    // }
   };
 
   const newModelChat = (m: number) => {
