@@ -249,23 +249,26 @@ export const queryGoogle = async (
   maxTokens: number,
   onStream: (answ: string) => void
 ) => {
-  // Convert messages to Google's format
-  const googleMessages = {
-    contents: [
-      {
-        parts: messages.map((msg) => ({ text: msg.content })),
-      },
-    ],
-  };
+  // Convert messages to OpenAI format for Gemini compatibility
+  const openAIMessages = messages.map((msg) => ({
+    role: msg.role,
+    content: msg.content,
+  }));
 
   const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API}`,
+    `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
     {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${GOOGLE_API}`,
       },
-      body: JSON.stringify(googleMessages),
+      body: JSON.stringify({
+        model,
+        messages: openAIMessages,
+        max_tokens: maxTokens,
+        stream: true,
+      }),
     }
   );
 
@@ -274,8 +277,5 @@ export const queryGoogle = async (
     throw new Error(`Google API error: ${resp.status} ${errorText}`);
   }
 
-  const data = await resp.json();
-  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  onStream(content);
-  return content;
+  return readStream(resp, onStream);
 };
