@@ -36,6 +36,11 @@ export default defineConfig({
         access: "public",
         optional: true,
       }),
+      GOOGLE_API: envField.string({
+        context: "client",
+        access: "public",
+        optional: false,
+      }),
     },
   },
 });

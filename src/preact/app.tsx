@@ -1,6 +1,6 @@
 import { useState, useRef } from "preact/hooks";
 import Markdown from "react-markdown";
-import { models, queryClaude, queryHuggingface } from "./model";
+import { models, queryClaude, queryHuggingface, queryGoogle } from "./model";
 import Prompter from "./Prompter";
 import { useReader } from "./reader";
 
@@ -43,6 +43,10 @@ export function App() {
 
     if (model.type === "huggingface") {
       await queryHuggingface(_chat, model.id, respLength, onStream);
+    }
+
+    if (model.type === "google") {
+      await queryGoogle(_chat, model.id, respLength, onStream);
     }
 
     if (readResp) reader.endOfStream();
@@ -159,6 +163,7 @@ const ModelIcon = ({ type }: { type: string }) => (
         claude: "✴",
         ollama: "🦙",
         huggingface: "🤗",
+        google: "G",
       }[type]
     }
   </span>

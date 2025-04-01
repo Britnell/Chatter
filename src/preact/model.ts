@@ -1,8 +1,27 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { ANTHROPIC_API, HUGGINGFACE_TOKEN, ELEVEN_KEY } from "astro:env/client";
+import {
+  ANTHROPIC_API,
+  HUGGINGFACE_TOKEN,
+  ELEVEN_KEY,
+  GOOGLE_API,
+} from "astro:env/client";
 import type { Message } from "./app";
 
+// HF inference warm models :
+// https://huggingface.co/models?inference=warm&sort=trending
+//    "Qwen/QwQ-32B-Preview",
+
 export const models = [
+  // {
+  //   type: "huggingface",
+  //   name: "xx",
+  //   id: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
+  // },
+  {
+    type: "huggingface",
+    name: "Deepseek R1 32B",
+    id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+  },
   {
     type: "huggingface",
     name: "Qwen Coder 32B",
@@ -10,18 +29,18 @@ export const models = [
   },
   {
     type: "huggingface",
-    name: "Llama 3.2 11B",
-    id: "meta-llama/Llama-3.2-11B-Vision-Instruct",
+    name: "Gemma 3 27b",
+    id: "google/gemma-3-27b-it",
   },
   // {
   //   type: "huggingface",
-  //   name: "Llama 3.3 70B",
-  //   id: "meta-llama/Llama-3.3-70B-Instruct",
+  //   name: "OLMo 2 32B",
+  //   id: "allenai/OLMo-2-0325-32B-Instruct",
   // },
   {
     type: "huggingface",
-    name: "QwQ 32B",
-    id: "Qwen/QwQ-32B-Preview",
+    name: "Qwen 2.5 72B",
+    id: "Qwen/Qwen2.5-72B-Instruct",
   },
   {
     type: "claude",
@@ -31,22 +50,18 @@ export const models = [
   {
     type: "claude",
     name: "haiku 3.5",
-    id: "claude-3-5-haiku-20241022",
+    id: "claude-3-5-haiku-latest",
   },
-  // {
-  //   type: "ollama",
-  //   name: "deepseek coder",
-  //   id: "deepseek-coder-v2",
-  // },
-  // {
-  //   type: "ollama",
-  //   name: "Qwen Coder",
-  //   id: "qwen2.5-coder:14b",
-  // },
   {
     type: "claude",
-    name: "Sonnet 3.5",
-    id: "claude-3-5-sonnet-20241022",
+    name: "Sonnet 3.7",
+    id: "claude-3-7-sonnet-latest",
+    // anthropic.claude-3-7-sonnet-20250219-v1:0	claude-3-7-sonnet@20250219
+  },
+  {
+    type: "google",
+    name: "Gemini 2.0 flash",
+    id: "gemini-2.0-flash",
   },
 ];
 
@@ -226,4 +241,41 @@ export const queryElevenStream = async (text: string) => {
   // Convert to blob and create URL
   const blob = new Blob([combinedChunks], { type: "audio/mpeg" });
   return window.URL.createObjectURL(blob);
+};
+
+export const queryGoogle = async (
+  messages: Message[],
+  model: string,
+  maxTokens: number,
+  onStream: (answ: string) => void
+) => {
+  // Convert messages to Google's format
+  const googleMessages = {
+    contents: [
+      {
+        parts: messages.map((msg) => ({ text: msg.content })),
+      },
+    ],
+  };
+
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_API}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(googleMessages),
+    }
+  );
+
+  if (!resp.ok) {
+    const errorText = await resp.text();
+    throw new Error(`Google API error: ${resp.status} ${errorText}`);
+  }
+
+  const data = await resp.json();
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  onStream(content);
+  return content;
 };
