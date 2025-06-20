@@ -1,54 +1,58 @@
-import { useState, useRef } from "preact/hooks";
-import Markdown from "react-markdown";
-import { models, queryClaude, queryHuggingface, queryGoogle } from "./model";
-import Prompter from "./Prompter";
-import { useReader } from "./reader";
+import { useState, useRef, useCallback, useEffect } from 'preact/hooks';
+import Markdown from 'react-markdown';
+import { models, queryClaude, queryHuggingface, queryGoogle } from './model';
+import Prompter from './Prompter';
+import { useReader } from './reader';
+import { useStreamingReader, useTextToSpeech, useVoiceRecognition } from './voice';
 
 export type Message = {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string;
 };
 
 export function App() {
   const [chat, setChat] = useState<Message[]>([]);
-  const [model, setModel] = useState(models[0]);
-  const [respLength, setRespLength] = useState(512);
+  const [model, setModel] = useState(models[4]);
+  const [respLength, setRespLength] = useState(2048);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [readResp, setReadResp] = useState(false);
+  const [voiceMode, setVoiceMode] = useState(true);
 
   const reader = useReader();
+  const { readStream, resetStream } = useStreamingReader();
+
+  async function makeQuery(chat: Message[], modelid: string, maxTokens: number, onStream: (answ: string) => void) {
+    if (model.type === 'claude') {
+      await queryClaude(chat, modelid, maxTokens, onStream);
+    }
+
+    if (model.type === 'huggingface') {
+      await queryHuggingface(chat, modelid, maxTokens, onStream);
+    }
+
+    if (model.type === 'google') {
+      await queryGoogle(chat, modelid, maxTokens, onStream);
+    }
+  }
 
   const onPrompt = async (prompt: string) => {
     const _chat: Message[] = [
       ...chat,
       {
-        role: "user",
+        role: 'user',
         content: prompt,
       },
     ];
 
-    setChat([..._chat, { role: "assistant", content: "" }]);
+    setChat([..._chat, { role: 'assistant', content: '' }]);
     if (readResp) reader.restart();
 
     const onStream = (answ: string) => {
       if (readResp) reader.readStream(answ);
-      setChat((c) =>
-        c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch))
-      );
+      setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
     };
 
-    if (model.type === "claude") {
-      await queryClaude(_chat, model.id, respLength, onStream);
-    }
-
-    if (model.type === "huggingface") {
-      await queryHuggingface(_chat, model.id, respLength, onStream);
-    }
-
-    if (model.type === "google") {
-      await queryGoogle(_chat, model.id, respLength, onStream);
-    }
-
+    await makeQuery(_chat, model.id, respLength, onStream);
     if (readResp) reader.endOfStream();
 
     // if (model.type === "ollama") {
@@ -60,10 +64,37 @@ export function App() {
     // }
   };
 
+  const onVoice = useCallback(async (tx: string, final: boolean) => {
+    const _chat = [...chat];
+    const lastChat = _chat.length - 1;
+
+    if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
+      _chat.push({ role: 'user', content: tx });
+    } else {
+      _chat[lastChat] = { role: 'user', content: tx };
+    }
+
+    setChat(_chat);
+
+    if (final) {
+      resetStream();
+
+      setChat([..._chat, { role: 'assistant', content: '' }]);
+
+      await makeQuery(_chat, model.id, respLength, (answ: string) => {
+        setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
+        readStream(answ);
+      });
+    }
+  }, []);
+
+  useVoiceRecognition(voiceMode, onVoice);
+
   const newModelChat = (m: number) => {
     setModel(models[m]);
     setChat([]);
   };
+  // const { speak } = useTextToSpeech();
 
   return (
     <div className=" bg-stone-400">
@@ -86,13 +117,7 @@ export function App() {
               </div>
             )}
             {chat.map((msg, i) => (
-              <div
-                key={i}
-                className={
-                  "  max-w-[70ch] " +
-                  (msg.role === "assistant" ? " ml-auto " : "")
-                }
-              >
+              <div key={i} className={'  max-w-[70ch] ' + (msg.role === 'assistant' ? ' ml-auto ' : '')}>
                 <span className="px-3 ">{msg.role}</span>
                 <div className=" bg-stone-300 rounded-lg px-3 py-2 ">
                   <Markdown>{msg.content}</Markdown>
@@ -100,7 +125,7 @@ export function App() {
               </div>
             ))}
           </div>
-          <Prompter onPrompt={onPrompt} />
+          {voiceMode ? <div>voice mode</div> : <Prompter onPrompt={onPrompt} />}
         </main>
 
         <aside className="p-2  space-y-6 flex flex-col justify-center items-stretch ">
@@ -112,8 +137,8 @@ export function App() {
                   <button
                     onClick={() => newModelChat(m)}
                     className={
-                      "text-sm w-full px-2 rounded hover:bg-stone-300 hover:bg-opacity-50 text-left text-stone-700 whitespace-pre flex gap-2 " +
-                      (model.id === mod.id ? " bg-stone-300 " : " ")
+                      'text-sm w-full px-2 rounded hover:bg-stone-300 hover:bg-opacity-50 text-left text-stone-700 whitespace-pre flex gap-2 ' +
+                      (model.id === mod.id ? ' bg-stone-300 ' : ' ')
                     }
                   >
                     <ModelIcon type={mod.type} />
@@ -127,7 +152,7 @@ export function App() {
           <div className="  space-y-2">
             <h2>settings</h2>
             <div className="text-xs flex gap-2 items-center">
-              <label className=" ">{"max tokens"}</label>
+              <label className=" ">{'max tokens'}</label>
               <input
                 type="number"
                 className="ml-auto bg-stone-300 p-1  w-16"
@@ -147,6 +172,17 @@ export function App() {
               <label for="readResp">Read answers</label>
             </div>
             <div className="x">
+              <input
+                type="checkbox"
+                id="voiceMode"
+                checked={voiceMode}
+                onChange={(ev) => {
+                  setVoiceMode((ev.target as HTMLInputElement).checked);
+                }}
+              />
+              <label for="voiceMode">Voice mode</label>
+            </div>
+            <div className="x">
               <button onClick={reader.stopReading}>stop reading</button>
             </div>
           </div>
@@ -160,10 +196,10 @@ const ModelIcon = ({ type }: { type: string }) => (
   <span className="">
     {
       {
-        claude: "✴",
-        ollama: "🦙",
-        huggingface: "🤗",
-        google: "G",
+        claude: '✴',
+        ollama: '🦙',
+        huggingface: '🤗',
+        google: 'G',
       }[type]
     }
   </span>

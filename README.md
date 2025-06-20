@@ -15,3 +15,10 @@ lorem ipsum
 - https://huggingface.co/docs/api-inference/en/tasks/chat-completion?code=js#using-the-api
 - https://ai.google.dev/gemini-api/docs/api-key
 - https://github.com/ollama/ollama/blob/main/docs/openai.md
+
+- https://huggingface.co/deepseek-ai/DeepSeek-V3?inference_api=true&inference_provider=novita&language=sh
+
+
+tts
+- https://kokorotts.com/
+- https://groq.com/pricing/

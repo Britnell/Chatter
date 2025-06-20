@@ -1,11 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
-import {
-  ANTHROPIC_API,
-  HUGGINGFACE_TOKEN,
-  ELEVEN_KEY,
-  GOOGLE_API,
-} from "astro:env/client";
-import type { Message } from "./app";
+import Anthropic from '@anthropic-ai/sdk';
+import { ANTHROPIC_API, HUGGINGFACE_TOKEN, ELEVEN_KEY, GOOGLE_API } from 'astro:env/client';
+import type { Message } from './app';
 
 // HF inference warm models :
 // https://huggingface.co/models?inference=warm&sort=trending
@@ -18,19 +13,19 @@ export const models = [
   //   id: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
   // },
   {
-    type: "huggingface",
-    name: "Deepseek R1 32B",
-    id: "deepseek-ai/DeepSeek-R1-Distill-Qwen-32B",
+    type: 'huggingface',
+    name: 'Deepseek R1 32B',
+    id: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B',
   },
   {
-    type: "huggingface",
-    name: "Qwen Coder 32B",
-    id: "Qwen/Qwen2.5-Coder-32B-Instruct",
+    type: 'huggingface',
+    name: 'Qwen Coder 32B',
+    id: 'Qwen/Qwen2.5-Coder-32B-Instruct',
   },
   {
-    type: "huggingface",
-    name: "Gemma 3 27b",
-    id: "google/gemma-3-27b-it",
+    type: 'huggingface',
+    name: 'Gemma 3 27b',
+    id: 'google/gemma-3-27b-it',
   },
   // {
   //   type: "huggingface",
@@ -38,65 +33,69 @@ export const models = [
   //   id: "allenai/OLMo-2-0325-32B-Instruct",
   // },
   {
-    type: "huggingface",
-    name: "Qwen 2.5 72B",
-    id: "Qwen/Qwen2.5-72B-Instruct",
+    type: 'huggingface',
+    name: 'Qwen 2.5 72B',
+    id: 'Qwen/Qwen2.5-72B-Instruct',
   },
   {
-    type: "claude",
-    name: "haiku 3.0",
-    id: "claude-3-haiku-20240307",
+    type: 'claude',
+    name: 'haiku 3.5',
+    id: 'claude-3-5-haiku-latest',
   },
   {
-    type: "claude",
-    name: "haiku 3.5",
-    id: "claude-3-5-haiku-latest",
-  },
-  {
-    type: "claude",
-    name: "Sonnet 3.7",
-    id: "claude-3-7-sonnet-latest",
+    type: 'claude',
+    name: 'Sonnet 3.7',
+    id: 'claude-3-7-sonnet-latest',
     // anthropic.claude-3-7-sonnet-20250219-v1:0	claude-3-7-sonnet@20250219
   },
   {
-    type: "google",
-    name: "Gemini 2.0 flash",
-    id: "gemini-2.0-flash",
+    type: 'claude',
+    name: 'Sonnet 4.0',
+    id: 'claude-sonnet-4-0',
   },
+  {
+    type: 'google',
+    name: 'Gemini 2.5 Pro',
+    id: 'gemini-2.5-pro-preview-06-05',
+  },
+  {
+    type: 'google',
+    name: 'Gemini 2.5 flash',
+    id: 'gemini-2.5-flash-preview-05-20',
+  },
+  // {
+  //   type: 'google',
+  //   name: 'Gemini 2.0 flash',
+  //   id: 'gemini-2.0-flash',
+  // },
 ];
 
 export const queryHuggingface = async (
   messages: Message[],
   model: string,
   maxTokens: number,
-  onStream: (answ: string) => void
+  onStream: (answ: string) => void,
 ) => {
-  const resp = await fetch(
-    `https://api-inference.huggingface.co/models/${model}/v1/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${HUGGINGFACE_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages,
-        model,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
-    }
-  );
+  const resp = await fetch(`https://api-inference.huggingface.co/models/${model}/v1/chat/completions`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${HUGGINGFACE_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages,
+      model,
+      max_tokens: maxTokens,
+      stream: true,
+    }),
+  });
   return readStream(resp, onStream);
 };
 
-const readStream = async (
-  response: Response,
-  onStream: (answ: string) => void
-) => {
+const readStream = async (response: Response, onStream: (answ: string) => void) => {
   const reader = response.body?.getReader();
   const decoder = new TextDecoder();
-  let answer = "";
+  let answer = '';
   let chunks = 0;
 
   while (reader) {
@@ -104,11 +103,11 @@ const readStream = async (
     if (done) break;
 
     const chunk = decoder.decode(value);
-    const lines = chunk.split("\n");
+    const lines = chunk.split('\n');
 
     lines.forEach((line) => {
       if (!line.trim()) return;
-      if (!line.startsWith("data: ")) return;
+      if (!line.startsWith('data: ')) return;
       const jsonStr = line.slice(5);
       try {
         const data = JSON.parse(jsonStr);
@@ -135,7 +134,7 @@ export const queryClaude = async (
   messages: Message[],
   model: string,
   maxTokens: number,
-  onStream: (ans: string) => void
+  onStream: (ans: string) => void,
 ) => {
   const stream = await client.messages.create({
     // max_tokens: 20,
@@ -144,9 +143,9 @@ export const queryClaude = async (
     messages,
     stream: true,
   });
-  let answer = "";
+  let answer = '';
   for await (const chunk of stream) {
-    if (chunk.type === "content_block_delta") {
+    if (chunk.type === 'content_block_delta') {
       // @ts-ignore
       answer += chunk.delta.text;
       onStream(answer);
@@ -155,15 +154,11 @@ export const queryClaude = async (
   return answer;
 };
 
-export const queryOllama = (
-  messages: Message[],
-  model: string,
-  maxTokens: number
-) =>
-  fetch("http://localhost:11434/v1/chat/completions", {
-    method: "POST",
+export const queryOllama = (messages: Message[], model: string, maxTokens: number) =>
+  fetch('http://localhost:11434/v1/chat/completions', {
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       model: model,
@@ -172,44 +167,37 @@ export const queryOllama = (
     }),
   }).then((res) => (res.ok ? res.json() : res.text()));
 
-const voiceid = "VuJ05kimyrfnJmOxLh2k";
+const voiceid = 'VuJ05kimyrfnJmOxLh2k';
 
 export const queryEleven = (text: string) =>
-  fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceid}` +
-      "?output_format=mp3_22050_32",
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "xi-api-key": ELEVEN_KEY ?? "",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_monolingual_v1",
-      }),
-    }
-  )
+  fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceid}` + '?output_format=mp3_22050_32', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'xi-api-key': ELEVEN_KEY ?? '',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: text,
+      model_id: 'eleven_monolingual_v1',
+    }),
+  })
     .then((resp) => resp.blob())
     .then((blob) => window.URL.createObjectURL(blob));
 
 export const queryElevenStream = async (text: string) => {
-  const resp = await fetch(
-    `https://api.elevenlabs.io/v1/text-to-speech/${voiceid}/stream`,
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "xi-api-key": ELEVEN_KEY ?? "",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_monolingual_v1",
-      }),
-    }
-  );
+  const resp = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceid}/stream`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'xi-api-key': ELEVEN_KEY ?? '',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      text: text,
+      model_id: 'eleven_monolingual_v1',
+    }),
+  });
 
   if (!resp.ok || !resp.body) {
     throw new Error(`HTTP error! status: ${resp.status}`);
@@ -239,7 +227,7 @@ export const queryElevenStream = async (text: string) => {
   }
 
   // Convert to blob and create URL
-  const blob = new Blob([combinedChunks], { type: "audio/mpeg" });
+  const blob = new Blob([combinedChunks], { type: 'audio/mpeg' });
   return window.URL.createObjectURL(blob);
 };
 
@@ -247,7 +235,7 @@ export const queryGoogle = async (
   messages: Message[],
   model: string,
   maxTokens: number,
-  onStream: (answ: string) => void
+  onStream: (answ: string) => void,
 ) => {
   // Convert messages to OpenAI format for Gemini compatibility
   const openAIMessages = messages.map((msg) => ({
@@ -255,22 +243,19 @@ export const queryGoogle = async (
     content: msg.content,
   }));
 
-  const resp = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${GOOGLE_API}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: openAIMessages,
-        max_tokens: maxTokens,
-        stream: true,
-      }),
-    }
-  );
+  const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${GOOGLE_API}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: openAIMessages,
+      max_tokens: maxTokens,
+      stream: true,
+    }),
+  });
 
   if (!resp.ok) {
     const errorText = await resp.text();
