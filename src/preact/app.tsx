@@ -3,7 +3,8 @@ import Markdown from 'react-markdown';
 import { models, queryClaude, queryHuggingface, queryGoogle } from './model';
 import Prompter from './Prompter';
 import { useReader } from './reader';
-import { useStreamingReader, useTextToSpeech, useVoiceRecognition } from './voice';
+import { useVoiceReader } from './voiceread';
+import { useVoiceRecognition } from './voice';
 
 export type Message = {
   role: 'user' | 'assistant';
@@ -19,7 +20,7 @@ export function App() {
   const [voiceMode, setVoiceMode] = useState(true);
 
   const reader = useReader();
-  const { readStream, resetStream } = useStreamingReader();
+  const { readStream, resetStream } = useVoiceReader();
 
   async function makeQuery(chat: Message[], modelid: string, maxTokens: number, onStream: (answ: string) => void) {
     if (model.type === 'claude') {
