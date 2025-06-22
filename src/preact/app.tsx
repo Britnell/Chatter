@@ -20,6 +20,7 @@ export function App() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [readResp, setReadResp] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
+  const [voiceModeStatus, setVoiceModeStatus] = useState<'idle' | 'record' | 'reply'>('idle');
 
   // Keep chatRef in sync with chat state
   useEffect(() => {
@@ -30,11 +31,54 @@ export function App() {
 
   const onVoiceComplete = () => {
     if (voiceMode) {
+      setVoiceModeStatus('idle');
       setTimeout(() => startListening(), 500);
     }
   };
 
   const { readStream, restart, endOfStream } = useVoiceReader(onVoiceComplete);
+
+  const onVoice = useCallback(
+    async (tx: string, final: boolean) => {
+      console.log({ tx, final });
+
+      const _chat = [...chatRef.current];
+      const lastChat = _chat.length - 1;
+
+      if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
+        _chat.push({ role: 'user', content: tx });
+      } else {
+        _chat[lastChat] = { role: 'user', content: tx };
+      }
+
+      setChat(_chat);
+
+      if (final) {
+        restart();
+        setVoiceModeStatus('reply');
+
+        setChat([..._chat, { role: 'assistant', content: '' }]);
+
+        await makeQuery(_chat, model.id, respLength, (answ: string) => {
+          setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
+          readStream(answ);
+        });
+
+        endOfStream();
+        // Note: voiceModeStatus will be set back to 'idle' in onVoiceComplete when TTS finishes
+      }
+    },
+    [model.id, respLength, restart, readStream, endOfStream],
+  );
+
+  const { isListening, isSupported, startListening, stopListening } = useVoiceRecognition(voiceMode, onVoice);
+
+  // Update voiceModeStatus when listening state changes
+  useEffect(() => {
+    if (voiceMode && isListening) {
+      setVoiceModeStatus('record');
+    }
+  }, [isListening, voiceMode]);
 
   async function makeQuery(chat: Message[], modelid: string, maxTokens: number, onStream: (answ: string) => void) {
     if (model.type === 'claude') {
@@ -79,37 +123,6 @@ export function App() {
     // }
   };
 
-  const onVoice = useCallback(
-    async (tx: string, final: boolean) => {
-      const _chat = [...chatRef.current];
-      const lastChat = _chat.length - 1;
-
-      if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
-        _chat.push({ role: 'user', content: tx });
-      } else {
-        _chat[lastChat] = { role: 'user', content: tx };
-      }
-
-      setChat(_chat);
-
-      if (final) {
-        restart();
-
-        setChat([..._chat, { role: 'assistant', content: '' }]);
-
-        await makeQuery(_chat, model.id, respLength, (answ: string) => {
-          setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
-          readStream(answ);
-        });
-
-        endOfStream();
-      }
-    },
-    [model.id, respLength, restart, readStream, endOfStream],
-  );
-
-  const { isListening, isSupported, startListening, stopListening } = useVoiceRecognition(voiceMode, onVoice);
-
   const newModelChat = (m: number) => {
     setModel(models[m]);
     setChat([]);
@@ -146,18 +159,63 @@ export function App() {
             ))}
           </div>
           {voiceMode ? (
-            <div>
+            <div className="flex justify-center items-center py-8">
               {!isSupported ? (
-                <span>Voice recognition not supported</span>
+                <div className="text-center text-stone-600">
+                  <p>Voice recognition not supported</p>
+                </div>
               ) : (
-                <>
-                  <button onClick={startListening} disabled={isListening}>
-                    {isListening ? 'Listening...' : 'Start'}
-                  </button>
-                  <button onClick={stopListening} disabled={!isListening}>
-                    Stop
-                  </button>
-                </>
+                <div className="flex flex-col items-center space-y-4">
+                  {voiceModeStatus === 'record' ? (
+                    // Big white circle when listening
+                    <div className="w-24 h-24 bg-white rounded-full shadow-lg animate-pulse flex items-center justify-center">
+                      <div className="w-4 h-4 bg-red-500 rounded-full animate-pulse"></div>
+                    </div>
+                  ) : voiceModeStatus === 'reply' ? (
+                    // Large "..." when AI is replying
+                    <div className="text-6xl text-stone-700 font-bold animate-pulse">...</div>
+                  ) : (
+                    // Start voice button when idle
+                    <button
+                      onClick={startListening}
+                      className="w-20 h-20 bg-stone-600 hover:bg-stone-700 text-white rounded-full shadow-lg transition-all duration-200 hover:scale-105 flex items-center justify-center"
+                    >
+                      <svg
+                        className="w-8 h-8"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  )}
+
+                  {/* Status text */}
+                  <div className="text-center text-stone-600">
+                    {voiceModeStatus === 'record' ? (
+                      <p className="text-lg font-medium">Listening...</p>
+                    ) : voiceModeStatus === 'reply' ? (
+                      <p className="text-lg font-medium">AI is responding...</p>
+                    ) : (
+                      <p className="text-sm">Tap to start voice chat</p>
+                    )}
+                  </div>
+
+                  {/* Stop button when listening */}
+                  {voiceModeStatus === 'record' && (
+                    <button
+                      onClick={stopListening}
+                      className="px-6 py-2 bg-red-500 hover:bg-red-600 text-white rounded-full text-sm transition-colors duration-200"
+                    >
+                      Stop Listening
+                    </button>
+                  )}
+                </div>
               )}
             </div>
           ) : (
