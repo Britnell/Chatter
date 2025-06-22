@@ -5,6 +5,14 @@ export function useVoiceRecognition(enabled: boolean, onTranscript: (tx: string,
   const [isListening, setIsListening] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
+  const stopListening = useCallback(() => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setIsListening(false);
+  }, []);
+
   const startListening = useCallback(() => {
     if (!enabled || !isSupported || isListening) return;
 
@@ -43,14 +51,6 @@ export function useVoiceRecognition(enabled: boolean, onTranscript: (tx: string,
 
     recognition.start();
   }, [enabled, isSupported, isListening, onTranscript]);
-
-  const stopListening = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    setIsListening(false);
-  }, []);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;

@@ -14,11 +14,17 @@ export type Message = {
 
 export function App() {
   const [chat, setChat] = useState<Message[]>([]);
+  const chatRef = useRef<Message[]>([]);
   const [model, setModel] = useState(models[4]);
-  const [respLength, setRespLength] = useState(2048);
+  const [respLength, setRespLength] = useState(10);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [readResp, setReadResp] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
+
+  // Keep chatRef in sync with chat state
+  useEffect(() => {
+    chatRef.current = chat;
+  }, [chat]);
 
   const reader = useReader();
 
@@ -75,7 +81,7 @@ export function App() {
 
   const onVoice = useCallback(
     async (tx: string, final: boolean) => {
-      const _chat = [...chat];
+      const _chat = [...chatRef.current];
       const lastChat = _chat.length - 1;
 
       if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
@@ -99,7 +105,7 @@ export function App() {
         endOfStream();
       }
     },
-    [chat, model.id, respLength, restart, readStream, endOfStream],
+    [model.id, respLength, restart, readStream, endOfStream],
   );
 
   const { isListening, isSupported, startListening, stopListening } = useVoiceRecognition(voiceMode, onVoice);
@@ -108,7 +114,6 @@ export function App() {
     setModel(models[m]);
     setChat([]);
   };
-  const { speak } = useTextToSpeech();
 
   return (
     <div className=" bg-stone-400">
