@@ -5,6 +5,7 @@ import Prompter from './Prompter';
 import { useReader } from './reader';
 import { useVoiceReader } from './voiceread';
 import { useVoiceRecognition } from './voice';
+import { useTextToSpeech } from './tts';
 
 export type Message = {
   role: 'user' | 'assistant';
@@ -20,7 +21,14 @@ export function App() {
   const [voiceMode, setVoiceMode] = useState(true);
 
   const reader = useReader();
-  const { readStream, resetStream } = useVoiceReader();
+
+  const onVoiceComplete = () => {
+    if (voiceMode) {
+      setTimeout(() => startListening(), 500);
+    }
+  };
+
+  const { readStream, restart, endOfStream } = useVoiceReader(onVoiceComplete);
 
   async function makeQuery(chat: Message[], modelid: string, maxTokens: number, onStream: (answ: string) => void) {
     if (model.type === 'claude') {
@@ -65,42 +73,48 @@ export function App() {
     // }
   };
 
-  const onVoice = useCallback(async (tx: string, final: boolean) => {
-    const _chat = [...chat];
-    const lastChat = _chat.length - 1;
+  const onVoice = useCallback(
+    async (tx: string, final: boolean) => {
+      const _chat = [...chat];
+      const lastChat = _chat.length - 1;
 
-    if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
-      _chat.push({ role: 'user', content: tx });
-    } else {
-      _chat[lastChat] = { role: 'user', content: tx };
-    }
+      if (_chat.length === 0 || _chat[lastChat].role === 'assistant') {
+        _chat.push({ role: 'user', content: tx });
+      } else {
+        _chat[lastChat] = { role: 'user', content: tx };
+      }
 
-    setChat(_chat);
+      setChat(_chat);
 
-    if (final) {
-      resetStream();
+      if (final) {
+        restart();
 
-      setChat([..._chat, { role: 'assistant', content: '' }]);
+        setChat([..._chat, { role: 'assistant', content: '' }]);
 
-      await makeQuery(_chat, model.id, respLength, (answ: string) => {
-        setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
-        readStream(answ);
-      });
-    }
-  }, []);
+        await makeQuery(_chat, model.id, respLength, (answ: string) => {
+          setChat((c) => c.map((ch, i) => (i === c.length - 1 ? { ...ch, content: answ } : ch)));
+          readStream(answ);
+        });
 
-  useVoiceRecognition(voiceMode, onVoice);
+        endOfStream();
+      }
+    },
+    [chat, model.id, respLength, restart, readStream, endOfStream],
+  );
+
+  const { isListening, isSupported, startListening, stopListening } = useVoiceRecognition(voiceMode, onVoice);
 
   const newModelChat = (m: number) => {
     setModel(models[m]);
     setChat([]);
   };
-  // const { speak } = useTextToSpeech();
+  const { speak } = useTextToSpeech();
 
   return (
     <div className=" bg-stone-400">
       <header className=" py-2 flex justify-between">
         <span>Chatter</span>
+        {/* <button onClick={() => speak('hello, how are you? lorem ipsum dim sum hong kong dollar.')}>xxx</button> */}
         <div>
           <ModelIcon type={model.type} />
           <span>{model.name}</span>
@@ -126,7 +140,24 @@ export function App() {
               </div>
             ))}
           </div>
-          {voiceMode ? <div>voice mode</div> : <Prompter onPrompt={onPrompt} />}
+          {voiceMode ? (
+            <div>
+              {!isSupported ? (
+                <span>Voice recognition not supported</span>
+              ) : (
+                <>
+                  <button onClick={startListening} disabled={isListening}>
+                    {isListening ? 'Listening...' : 'Start'}
+                  </button>
+                  <button onClick={stopListening} disabled={!isListening}>
+                    Stop
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <Prompter onPrompt={onPrompt} />
+          )}
         </main>
 
         <aside className="p-2  space-y-6 flex flex-col justify-center items-stretch ">

@@ -4,20 +4,12 @@ const VOICE_OPTIONS = ['af_sky'] as const;
 type Voice = (typeof VOICE_OPTIONS)[number];
 
 interface UseTextToSpeechOptions {
-  voice?: Voice;
-  model?: string;
   onStart?: () => void;
   onEnd?: () => void;
   onError?: (error: Error) => void;
 }
 
-export function useTextToSpeech({
-  voice = 'af_sky',
-  model = 'tts-1',
-  onStart,
-  onEnd,
-  onError,
-}: UseTextToSpeechOptions = {}) {
+export function useTextToSpeech({ onStart, onEnd, onError }: UseTextToSpeechOptions = {}) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortController = useRef<AbortController | null>(null);
 
@@ -53,13 +45,16 @@ export function useTextToSpeech({
         const response = await fetch('http://localhost:8880/v1/audio/speech', {
           method: 'POST',
           headers: {
+            accept: 'application/json',
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
+            // Authorization: `Bearer ${import.meta.env.VITE_OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model,
+            voice: 'af_sky',
+            model: 'tts-1',
+            lang_code: 'en-US',
             input: text,
-            voice,
+            speed: 1,
             response_format: 'mp3',
           }),
           signal: abortController.current.signal,
@@ -105,7 +100,7 @@ export function useTextToSpeech({
         return Promise.resolve();
       }
     },
-    [cleanup, model, onStart, onEnd, onError, voice],
+    [cleanup, onStart, onEnd, onError],
   );
 
   useEffect(() => {
