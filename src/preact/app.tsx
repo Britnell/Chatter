@@ -16,7 +16,7 @@ export function App() {
   const [chat, setChat] = useState<Message[]>([]);
   const chatRef = useRef<Message[]>([]);
   const [model, setModel] = useState(models[4]);
-  const [respLength, setRespLength] = useState(10);
+  const [respLength, setRespLength] = useState(2048);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [readResp, setReadResp] = useState(false);
   const [voiceMode, setVoiceMode] = useState(true);
