@@ -42,7 +42,20 @@ export function useVoiceRecognition(enabled: boolean, onTranscript: (tx: string,
 
     recognition.onerror = (ev: any) => {
       console.error('Speech recognition error:', ev.error);
-      recognition.stop();
+      
+      // If it's a no-speech error and we're still enabled, restart recognition
+      if (ev.error === 'no-speech' && enabled) {
+        console.log('No speech detected, restarting recognition...');
+        recognition.stop();
+        // Restart after a brief delay to avoid rapid restarts
+        setTimeout(() => {
+          if (enabled && !isListening) {
+            startListening();
+          }
+        }, 1000);
+      } else {
+        recognition.stop();
+      }
     };
 
     recognition.onend = () => {
